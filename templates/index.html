@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PASETO Конструктор</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], 
+        input[type="password"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eef8ff;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .token-output {
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: monospace;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none;
+        }
+        .radio-group {
+            margin: 10px 0;
+        }
+        .radio-label {
+            display: inline-block;
+            margin-right: 15px;
+            font-weight: normal;
+        }
+        .key-fields {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PASETO Конструктор</h1>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="create">Создать токен</div>
+            <div class="tab" data-tab="verify">Проверить токен</div>
+        </div>
+        
+        <!-- Таб создания токена -->
+        <div class="tab-content active" id="create-tab">
+            <h2>Создание PASETO токена</h2>
+            <form id="create-form">
+                <div class="form-group">
+                    <label>Тип операции:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="operation" value="encrypt" checked> 
+                            Шифрование (local)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="operation" value="sign"> 
+                            Подпись (public)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="version">Версия протокола:</label>
+                    <select id="version" name="version">
+                        <option value="v4">v4 (рекомендуется)</option>
+                        <option value="v3">v3</option>
+                        <option value="v2">v2</option>
+                        <option value="v1">v1</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payload">Данные (JSON):</label>
+                    <textarea id="payload" name="payload" placeholder='{"sub": "test123", "exp": 1735689600}'></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="footer">Footer (необязательно):</label>
+                    <input type="text" id="footer" name="footer" placeholder="Дополнительные данные">
+                </div>
+                
+                <div class="form-group" id="key-container">
+                    <label>Ключи:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="key-type" value="generate" checked> 
+                            Сгенерировать новый ключ
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="key-type" value="use-existing"> 
+                            Использовать существующий ключ
+                        </label>
+                    </div>
+                    
+                    <div class="key-fields hidden" id="existing-key-fields">
+                        <!-- Для симметричного шифрования (local) -->
+                        <div id="symmetric-key-field" class="form-group">
+                            <label for="symmetric-key">Секретный ключ (hex):</label>
+                            <input type="text" id="symmetric-key" name="symmetric-key" placeholder="b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2">
+                        </div>
+                        
+                        <!-- Для асимметричного шифрования (public) -->
+                        <div id="asymmetric-keys-fields" class="hidden">
+                            <div class="form-group">
+                                <label for="private-key">Приватный ключ (hex):</label>
+                                <input type="text" id="private-key" name="private-key" placeholder="Приватный ключ в формате hex">
+                            </div>
+                            <div class="form-group">
+                                <label for="public-key">Публичный ключ (hex):</label>
+                                <input type="text" id="public-key" name="public-key" placeholder="Публичный ключ в формате hex">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit">Создать токен</button>
+                <div style="margin-top: 10px; text-align: center;">
+                    <p>Нажимая на кнопку "Создать токен", вы соглашаетесь с <a href="/agreement" style="color: #3498db; text-decoration: none;">Соглашением об использовании</a></p>
+                </div>
+            </form>
+                
+            <div id="create-result" class="result hidden">
+                <h3>Созданный токен</h3>
+                <div id="token-output" class="token-output"></div>
+                
+                <div id="generated-keys" class="hidden">
+                    <h3>Сгенерированные ключи</h3>
+                    <div id="key-output" class="token-output"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Таб проверки токена -->
+        <div class="tab-content" id="verify-tab">
+            <h2>Проверка PASETO токена</h2>
+            <form id="verify-form">
+                <div class="form-group">
+                    <label for="token">PASETO токен:</label>
+                    <textarea id="token" name="token" placeholder="v4.local.BEIh61...""></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="verify-footer">Footer (если есть):</label>
+                    <input type="text" id="verify-footer" name="footer">
+                </div>
+                
+                <div class="form-group">
+                    <label>Тип операции:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="verify-operation" value="decrypt" checked> 
+                            Расшифровка (local)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="verify-operation" value="verify"> 
+                            Проверка подписи (public)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="verify-key-container">
+                    <!-- Для симметричного шифрования (local) -->
+                    <div id="verify-symmetric-key-field">
+                        <label for="verify-symmetric-key">Секретный ключ (hex):</label>
+                        <input type="text" id="verify-symmetric-key" name="verify-symmetric-key" placeholder="Секретный ключ в формате hex">
+                    </div>
+                    
+                    <!-- Для асимметричного шифрования (public) -->
+                    <div id="verify-public-key-field" class="hidden">
+                        <label for="verify-public-key">Публичный ключ (hex):</label>
+                        <input type="text" id="verify-public-key" name="verify-public-key" placeholder="Публичный ключ в формате hex">
+                    </div>
+                </div>
+                
+                <button type="submit">Проверить токен</button>
+            </form>
+            
+            <div id="verify-result" class="result hidden">
+                <h3>Результат проверки</h3>
+                <div id="verify-output" class="token-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Переключение табов
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+        
+        // Переключение типа операции
+        document.querySelectorAll('input[name="operation"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isEncrypt = document.querySelector('input[name="operation"]:checked').value === 'encrypt';
+                document.getElementById('symmetric-key-field').classList.toggle('hidden', !isEncrypt);
+                document.getElementById('asymmetric-keys-fields').classList.toggle('hidden', isEncrypt);
+            });
+        });
+        
+        // Переключение типа ключа
+        document.querySelectorAll('input[name="key-type"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const useExisting = document.querySelector('input[name="key-type"]:checked').value === 'use-existing';
+                document.getElementById('existing-key-fields').classList.toggle('hidden', !useExisting);
+            });
+        });
+        
+        // Переключение типа проверки
+        document.querySelectorAll('input[name="verify-operation"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isDecrypt = document.querySelector('input[name="verify-operation"]:checked').value === 'decrypt';
+                document.getElementById('verify-symmetric-key-field').classList.toggle('hidden', !isDecrypt);
+                document.getElementById('verify-public-key-field').classList.toggle('hidden', isDecrypt);
+            });
+        });
+        
+        // Обработка формы создания
+        document.getElementById('create-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                let payloadJson;
+                let payloadText = document.getElementById('payload').value.trim();
+                
+                console.log('Исходный текст:', payloadText);
+                console.log('Тип данных:', typeof payloadText);
+                
+                try {
+                    payloadText = payloadText.replace(/'/g, '"');
+                    console.log('После замены кавычек:', payloadText);
+                    payloadJson = payloadText ? JSON.parse(payloadText) : {};
+                    console.log('Распарсенный JSON:', payloadJson);
+                } catch (jsonError) {
+                    console.error('Ошибка парсинга JSON:', jsonError);
+                    throw new Error('Неверный формат JSON. Пример: {"sub": "test123", "exp": 1735689600}');
+                }
+
+                const operation = document.querySelector('input[name="operation"]:checked').value;
+                const purpose = operation === 'encrypt' ? 'local' : 'public';
+                const useExisting = document.querySelector('input[name="key-type"]:checked').value === 'use-existing';
+
+                let key = "";
+                if (useExisting) {
+                    if (operation === 'encrypt') {
+                        key = document.getElementById('symmetric-key').value.trim().toLowerCase();
+                    } else {
+                        key = document.getElementById('private-key').value.trim().toLowerCase();
+                    }
+                    
+                    // Проверяем формат ключа
+                    if (!/^[0-9a-f]{64}$/.test(key)) {
+                        throw new Error('Ключ должен быть 64-символьной hex строкой (0-9, a-f)');
+                    }
+                }
+
+                const formData = {
+                    key: key || "",  // Если ключ пустой, отправляем пустую строку
+                    payload: payloadJson,
+                    version: document.getElementById('version').value,
+                    purpose: purpose,
+                    footer: document.getElementById('footer').value || ""
+                };
+
+                console.log('Отправляемые данные:', JSON.stringify(formData, null, 2));
+
+                const response = await fetch('/encrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const responseText = await response.text();
+                console.log('Ответ сервера:', responseText);
+
+                if (!response.ok) {
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        throw new Error(errorData.error || 'Неизвестная ошибка сервера');
+                    } catch (e) {
+                        throw new Error(`Ошибка сервера: ${responseText}`);
+                    }
+                }
+
+                document.getElementById('create-result').classList.remove('hidden');
+                document.getElementById('token-output').textContent = responseText;
+                
+            } catch (error) {
+                document.getElementById('create-result').classList.remove('hidden');
+                document.getElementById('token-output').textContent = `Ошибка: ${error.message}`;
+                console.error('Ошибка:', error);
+            }
+        });
+        
+        // Добавляем пример валидного ключа и подсказку
+        const exampleKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        document.getElementById('symmetric-key').placeholder = exampleKey;
+        document.getElementById('private-key').placeholder = exampleKey;
+
+        // Добавляем валидацию при вводе ключа
+        ['symmetric-key', 'private-key'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', function() {
+                    // Удаляем все символы, кроме hex
+                    this.value = this.value.toLowerCase().replace(/[^0-9a-f]/g, '');
+                });
+                
+                element.addEventListener('blur', function() {
+                    const key = this.value.trim();
+                    if (key && key.length !== 64) {
+                        alert('Ключ должен быть 64-символьной hex строкой (0-9, a-f)');
+                    }
+                });
+            }
+        });
+        
+        // Обработка формы проверки
+        document.getElementById('verify-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const operation = document.querySelector('input[name="verify-operation"]:checked').value;
+                
+                const formData = {
+                    key: "",
+                    token: document.getElementById('token').value.trim(),
+                    footer: document.getElementById('verify-footer').value || "",
+                    purpose: operation === 'decrypt' ? 'local' : 'public'
+                };
+
+                // Добавляем ключ в зависимости от операции
+                if (operation === 'decrypt') {
+                    formData.key = document.getElementById('verify-symmetric-key').value.trim().toLowerCase();
+                } else {
+                    formData.key = document.getElementById('verify-public-key').value.trim().toLowerCase();
+                }
+
+                // Проверяем формат ключа
+                if (!/^[0-9a-f]{64}$/.test(formData.key)) {
+                    throw new Error('Ключ должен быть 64-символьной hex строкой (0-9, a-f)');
+                }
+
+                console.log('Отправляемые данные:', JSON.stringify(formData, null, 2));
+
+                const response = await fetch('/decrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const responseText = await response.text();
+                console.log('Ответ сервера:', responseText);
+
+                if (!response.ok) {
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        throw new Error(errorData.error || 'Неизвестная ошибка сервера');
+                    } catch (e) {
+                        throw new Error(`Ошибка сервера: ${responseText}`);
+                    }
+                }
+
+                document.getElementById('verify-result').classList.remove('hidden');
+                try {
+                    // Пробуем распарсить JSON-ответ
+                    const jsonResponse = JSON.parse(responseText);
+                    // Если есть поле payload, выводим только его содержимое
+                    if (jsonResponse.payload) {
+                        document.getElementById('verify-output').textContent = 
+                            JSON.stringify(jsonResponse.payload, null, 2);
+                    } else {
+                        document.getElementById('verify-output').textContent = 
+                            JSON.stringify(jsonResponse, null, 2);
+                    }
+                } catch (e) {
+                    // Если не JSON, выводим как есть
+                    document.getElementById('verify-output').textContent = responseText;
+                }
+                
+            } catch (error) {
+                document.getElementById('verify-result').classList.remove('hidden');
+                document.getElementById('verify-output').textContent = `Ошибка: ${error.message}`;
+                console.error('Ошибка:', error);
+            }
+        });
+
+        // Добавляем валидацию для ключей проверки
+        ['verify-symmetric-key', 'verify-public-key'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.placeholder = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+                element.addEventListener('input', function() {
+                    this.value = this.value.toLowerCase().replace(/[^0-9a-f]/g, '');
+                });
+                
+                element.addEventListener('blur', function() {
+                    const key = this.value.trim();
+                    if (key && key.length !== 64) {
+                        alert('Ключ должен быть 64-символьной hex строкой (0-9, a-f)');
+                    }
+                });
+            }
+        });
+
+        // Форматирование JSON при потере фокуса
+        document.getElementById('payload').addEventListener('blur', function() {
+            try {
+                const text = this.value.trim();
+                if (text) {
+                    let jsonText = text.replace(/'/g, '"');
+                    const parsed = JSON.parse(jsonText);
+                    this.value = JSON.stringify(parsed, null, 2);
+                }
+            } catch (e) {
+                // Оставляем как есть
+            }
+        });
+
+        // Форматирование ключей при потере фокуса
+        ['symmetric-key', 'private-key', 'public-key'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('blur', function() {
+                    // Удаляем все пробелы и переносы строк из ключа
+                    this.value = this.value.trim().replace(/[\s\n]/g, '');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

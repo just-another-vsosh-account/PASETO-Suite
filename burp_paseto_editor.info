@@ -1,0 +1,20 @@
+{
+    "name": "PASETO Editor",
+    "version": "1.0",
+    "description": "A Burp Suite extension for editing, signing, verifying, and attacking PASETO tokens",
+    "author": "VSOSH_Prj",
+    "license": "MIT",
+    "dependencies": [
+        "paseto"
+    ],
+    "features": [
+        "PASETO token detection in HTTP requests/responses",
+        "Token decoding and editing",
+        "Token signing and verification",
+        "Key management (generate, load, save)",
+        "Automated attacks on PASETO tokens",
+        "Support for all PASETO versions (v1, v2, v3, v4)"
+    ],
+    "bugs": "https://github.com/VSOSH_Prj/issues",
+    "repository": "https://github.com/VSOSH_Prj"
+} 

@@ -1,0 +1,14 @@
+services:
+  site:
+    build:
+      context: .
+      dockerfile: site.Dockerfile
+    ports:
+      - "80:80"
+
+  cli:
+    build:
+      context: .
+      dockerfile: cli.Dockerfile
+    
+
